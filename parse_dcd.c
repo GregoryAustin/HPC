@@ -1,8 +1,8 @@
 #define _GNU_SOURCE
 #include <stdlib.h>
+#include <stdio.h>
 #include "includes/dcdplugin.c"
-
-const char *dcd_file = "example_pn3_10RU_751frames.dcd";
+#include <assert.h>
 
 /*
 ** Read and print first 10 timesteps and first 10 atoms per timestep in DCD files
@@ -15,9 +15,133 @@ const char *dcd_file = "example_pn3_10RU_751frames.dcd";
 **
 ** If things start failing silently set NOISY to 1 on line 117 of dcdplugin.c (This might help or might not?)
 */
+
+
+char** str_split(char* a_str, const char a_delim)
+{
+    char** result    = 0;
+    size_t count     = 0;
+    char* tmp        = a_str;
+    char* last_comma = 0;
+    char delim[2];
+    delim[0] = a_delim;
+    delim[1] = 0;
+
+    /* Count how many elements will be extracted. */
+    while (*tmp)
+    {
+        if (a_delim == *tmp)
+        {
+            count++;
+            last_comma = tmp;
+        }
+        tmp++;
+    }
+
+    /* Add space for trailing token. */
+    count += last_comma < (a_str + strlen(a_str) - 1);
+
+    /* Add space for terminating null string so caller
+       knows where the list of returned strings ends. */
+    count++;
+
+    result = malloc(sizeof(char*) * count);
+
+    if (result)
+    {
+        size_t idx  = 0;
+        char* token = strtok(a_str, delim);
+
+        while (token)
+        {
+            assert(idx < count);
+            *(result + idx++) = strdup(token);
+            token = strtok(0, delim);
+        }
+        assert(idx == count - 1);
+        *(result + idx) = 0;
+    }
+
+    return result;
+}
+
+
 int main(int argc, char **argv) {
+    /***************************************************************/
+    /**********************Reading Input File **********************/
+    /***************************************************************/
+
+    char *input_file; 
+    char *output_file; 
+    for(int i=0; i<argc; ++i)
+    {   
+        if (!strcmp(argv[i], "-i")) {
+            if (i+1 < argc) 
+                input_file = argv[i+1];
+        } else if (!strcmp(argv[i], "-o")) {
+            if (i+1 < argc) 
+                output_file = argv[i+1];
+        }
+    }
+
+    FILE *ptr_file; 
+    char buf[1000];
+
+    ptr_file = fopen(input_file, "r");
+
+    if (!ptr_file)
+        return 1;
+
+    int count = 0; 
+    int k, a_begin, a_end, b_begin, b_end;
+    char **tokens; 
+    char *dcdfile; 
+
+    while (fgets(buf,1000, ptr_file)!=NULL) {
+        if (count == 0) {
+            int c = 0; 
+
+
+            dcdfile = malloc(sizeof(char*) * strlen(buf));
+             while (buf[c] != '\0' && buf[c] != '\n') {
+                dcdfile[c] = buf[c];
+                c++;
+             }
+             // this gets rid of a line break before the \0 character
+             // TODO: a safer way to do this (ignore \n's) 
+             dcdfile[c-1] = '\0';
+        } else if (count == 1)
+            sscanf(buf, "%d", &k);
+        else if (count == 2) {
+            tokens = str_split(buf, '-');
+            sscanf (*(tokens), "%d", &a_begin);
+            sscanf(*(tokens+1), "%d", &a_end);
+        } else if (count == 3) {
+            tokens = str_split(buf, '-');
+            sscanf (*(tokens), "%d", &b_begin);
+            sscanf(*(tokens+1), "%d", &b_end);
+        }
+        // a little bit of mem mgmt
+        if (count == 2 || count == 3) {
+            free(*(tokens));
+            free(*(tokens+1));
+            free(tokens);
+        }
+        count++; 
+    }
+    // printf("input: %s", dcdfile);
+
+
+    printf("input: %s\nk: %d\nA: %d - %d\nB: %d - %d\n", dcdfile, k, a_begin, a_end, b_begin, b_end);
+
+    fclose(ptr_file);
+
+    /***************************************************************/
+    /**************** Done Reading Input File **********************/
+    /***************************************************************/
+    
     int natoms = 0;
-    void *raw_data = open_dcd_read(dcd_file, "dcd", &natoms);
+    void *raw_data = open_dcd_read(dcdfile, "dcd", &natoms);
     if (!raw_data) {
         printf("Please enter a valid name for the input file \n");
         return 1;
@@ -61,5 +185,7 @@ int main(int argc, char **argv) {
     if (read_failed) {
         return 2;
     }
+    
     return 0;
+
 }

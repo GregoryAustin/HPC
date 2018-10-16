@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "includes/dcdplugin.c"
+#include "priority_queue.c"
 #include <assert.h>
 
 /*
@@ -15,7 +16,6 @@
 **
 ** If things start failing silently set NOISY to 1 on line 117 of dcdplugin.c (This might help or might not?)
 */
-
 
 char** str_split(char* a_str, const char a_delim)
 {
@@ -65,6 +65,37 @@ char** str_split(char* a_str, const char a_delim)
     return result;
 }
 
+void calculateDistances3D(float *Ax, float *Ay, float *Az, int k, 
+                          int begin_a, int end_a, int begin_b, int end_b,
+                          Node **pq)
+{
+    int i;
+
+    // begin_a--; end_a--; begin_b--; end_b--; 
+
+    for (i = begin_a; i <= end_a; i++) {
+        int j; 
+        for (j = begin_b; j <= end_b; j++) {
+            float dx = Ax[i] - Ax[j];
+            float dy = Ay[i] - Ay[j];
+            float dz = Az[i] - Az[j];
+
+            float dx2 = dx * dx;
+            float dy2 = dy * dy;
+            float dz2 = dz * dz;
+
+            float squaredDistance = dx2 + dy2 + dz2;
+
+            push(pq, i, j, sqrtf(squaredDistance));
+
+
+            // pairs[i] = (pair) {i, j, sqrtf(squaredDistance)};
+        }
+    }
+}
+
+
+
 
 int main(int argc, char **argv) {
     /***************************************************************/
@@ -113,6 +144,8 @@ int main(int argc, char **argv) {
         } else if (count == 1)
             sscanf(buf, "%d", &k);
         else if (count == 2) {
+            //TODO: handle itemized list 
+            //TODO: handle ranges within itemized list 
             tokens = str_split(buf, '-');
             sscanf (*(tokens), "%d", &a_begin);
             sscanf(*(tokens+1), "%d", &a_end);
@@ -135,7 +168,6 @@ int main(int argc, char **argv) {
     printf("input: %s\nk: %d\nA: %d - %d\nB: %d - %d\n", dcdfile, k, a_begin, a_end, b_begin, b_end);
 
     fclose(ptr_file);
-
     /***************************************************************/
     /**************** Done Reading Input File **********************/
     /***************************************************************/
@@ -143,7 +175,7 @@ int main(int argc, char **argv) {
     int natoms = 0;
     void *raw_data = open_dcd_read(dcdfile, "dcd", &natoms);
     if (!raw_data) {
-        printf("Please enter a valid name for the input file \n");
+        printf("Please enter a valid name for the dcd file \n");
         return 1;
     }
     dcdhandle *dcd = (dcdhandle *) raw_data;
@@ -155,7 +187,6 @@ int main(int argc, char **argv) {
         int rc = read_next_timestep(raw_data, natoms, &timestep);
         if (rc) {
             read_failed = 1;
-
             break;
         }
         /* At this point 
@@ -170,13 +201,35 @@ int main(int argc, char **argv) {
           
            Both are overwritten next loop 
         */
-        printf("Timestep %d\n", i);
-        printf("i: x    y      z\n");
-        int n = natoms > 10 ? 10 : natoms;
-        for (int j = 0; j < n; ++j) {
-            float *current = timestep.coords + 3 * j;
-            printf("%d: %3.2f %3.2f %3.2f\n", j, current[0], current[1], current[2]);
-        }
+
+
+        // printf("Timestep %d\n", i);
+        // printf("i: x    y      z\n");
+        int n = natoms; // > 10 ? 10 : natoms;
+        
+        Node *pq = newNode(1,1,999999); 
+        // printf("HERE");
+        calculateDistances3D(dcd->x, dcd->y, dcd->z, 3, a_begin, a_end, b_begin, b_end, &pq);  
+
+
+        int count = 0; 
+        while (!isEmpty(&pq) && count < 3) { 
+            Node *pk = peek(&pq);
+            printf("%d, %d, %d, %f\n", i, pk->a, pk->b, pk->priority); 
+            pop(&pq); 
+            count++;
+        } 
+
+        // cleaning up! 
+        while (!isEmpty(&pq)) 
+            pop(&pq); 
+        
+      
+
+        // for (int j = 0; j < n; ++j) {
+        //     float *current = timestep.coords + 3 * j;
+        //     printf("%d: %3.2f %3.2f %3.2f\n", j, current[0], current[1], current[2]);
+        // }
         printf("\n");
         if (i >= 10) break;
     }

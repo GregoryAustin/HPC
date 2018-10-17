@@ -1,4 +1,4 @@
- /***************************************************************************
+/***************************************************************************
   *cr
   *cr            (C) Copyright 1995-2006 The Board of Trustees of the
   *cr                        University of Illinois
@@ -404,7 +404,7 @@
              the following element must be COLOR, with three RGB triples
  norms       x1,y1,z1,x2,y2,z2,x3,y3,z3                 
  line        x1,y1,z1,x2,y2,z2                        0=solid     pixel width
-                                                      1=stippled
+=stippled
  cylinder    x1,y1,z1,x2,y2,z2                        resolution  radius
  capcyl      x1,y1,z1,x2,y2,z2                        resolution  radius
  sphere      x1,y1,z1                                 resolution  radius

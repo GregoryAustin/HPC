@@ -4,6 +4,7 @@
 #include "includes/dcdplugin.c"
 #include "priority_queue.c"
 #include <assert.h>
+#include <time.h>
 
 /*
 ** Read and print first 10 timesteps and first 10 atoms per timestep in DCD files
@@ -96,7 +97,6 @@ void calculateDistances3D(float *Ax, float *Ay, float *Az, int k,
 
 
 
-
 int main(int argc, char **argv) {
     /***************************************************************/
     /**********************Reading Input File **********************/
@@ -171,23 +171,25 @@ int main(int argc, char **argv) {
     /***************************************************************/
     /**************** Done Reading Input File **********************/
     /***************************************************************/
-    
+  
     int natoms = 0;
-    void *raw_data = open_dcd_read(dcdfile, "dcd", &natoms);
+    void *raw_data = open_dcd_read(dcdfile, "dcd", &natoms);//
     if (!raw_data) {
-        printf("Please enter a valid name for the dcd file \n");
+        printf("Please enter a valid name for the dcd file \n");//
         return 1;
     }
-    dcdhandle *dcd = (dcdhandle *) raw_data;
+    dcdhandle *dcd = (dcdhandle *) raw_data;//
 
     molfile_timestep_t timestep;
     timestep.coords = (float *) malloc(3 * sizeof(float) * natoms);
-    int read_failed = 0;
-    for (int i = 0; i < dcd->nsets; ++i) {
+
+    
+
+    for (int i = 0; i < dcd->nsets; i++) {
         int rc = read_next_timestep(raw_data, natoms, &timestep);
         if (rc) {
-            read_failed = 1;
-            break;
+            fprintf(stderr, "error in read_next_timestep on frame %d\n", i);
+            return 1;
         }
         /* At this point 
            dcd contains
@@ -201,10 +203,6 @@ int main(int argc, char **argv) {
           
            Both are overwritten next loop 
         */
-
-
-        // printf("Timestep %d\n", i);
-        // printf("i: x    y      z\n");
         int n = natoms; // > 10 ? 10 : natoms;
         
         Node *pq = newNode(1,1,999999); 
@@ -223,21 +221,17 @@ int main(int argc, char **argv) {
         // cleaning up! 
         while (!isEmpty(&pq)) 
             pop(&pq); 
-        
-      
-
-        // for (int j = 0; j < n; ++j) {
-        //     float *current = timestep.coords + 3 * j;
-        //     printf("%d: %3.2f %3.2f %3.2f\n", j, current[0], current[1], current[2]);
-        // }
+    
         printf("\n");
-        if (i >= 10) break;
+
+
+        // printf("Timestep %d\n", i);
+        // printf("i: x    y      z\n");
+        
+        // if (i >= 10) break;
     }
     free(timestep.coords);    
     close_file_read(raw_data);
-    if (read_failed) {
-        return 2;
-    }
     
     return 0;
 

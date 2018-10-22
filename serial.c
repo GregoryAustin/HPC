@@ -6,6 +6,7 @@
 #include "linked_list.c"
 #include <assert.h>
 #include <time.h>
+#include <omp.h>
 
 unsigned int_size = sizeof(int); 
 
@@ -60,12 +61,13 @@ char** str_split(char* a_str, const char a_delim)
 /*
     Creates a LinkedList set given starting index and ending idnex  
 */
-void createSet(int set_begin, int set_end, struct LNode** head_ref) {
+void createSet(int set_begin, int set_end, struct LNode** head_ref, int * count) {
     int i; 
-    
+    *count = 0; 
     for (i = set_end; i >= set_begin; --i) {
         // printf("PUSHING"); 
-        push(head_ref, &i, int_size); 
+        push(head_ref, &i, int_size);
+        *count += 1;  
     }
 }
 
@@ -109,6 +111,8 @@ int main(int argc, char **argv) {
     /***************************************************************/
     /**********************Reading Input File **********************/
     /***************************************************************/
+    double start_time, run_time;
+    start_time = omp_get_wtime();
 
     char *input_file; 
     char *output_file; 
@@ -182,10 +186,11 @@ int main(int argc, char **argv) {
   	
 
   	struct LNode *setA = NULL; 
+  	int countA = 0, countB = 0; 
     struct LNode *setB = NULL; 
 
-    createSet(a_begin, a_end, &setA); // THESE ARE 100s 
-    createSet(b_begin, b_end, &setB); // THESE ARE 100s 
+    createSet(a_begin, a_end, &setA, &countA); // THESE ARE 100s 
+    createSet(b_begin, b_end, &setB, &countB); // THESE ARE 100s 
 
 
     int natoms = 0;
@@ -244,10 +249,13 @@ int main(int argc, char **argv) {
         // printf("Timestep %d\n", i);
         // printf("i: x    y      z\n");
         
-        if (i >= 10) break;
+        // if (i >= 10) break;
     }
     free(timestep.coords);    
     close_file_read(raw_data);
+
+    run_time = omp_get_wtime() - start_time;
+    printf("\n%lf seconds\n ",run_time);
     
     return 0;
 

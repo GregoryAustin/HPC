@@ -1,9 +1,9 @@
 #define _GNU_SOURCE
 #include <stdlib.h>
 #include <stdio.h>
-#include "includes/dcdplugin.c"
-#include "priority_queue.c"
-#include "linked_list.c"
+#include "../includes/dcdplugin.c"
+#include "../priority_queue.c"
+#include "../linked_list.c"
 #include <assert.h>
 #include <time.h>
 #include <omp.h>
@@ -96,7 +96,7 @@ void calculateDistances3D(float *Ax, float *Ay, float *Az, int k,
 
             // printf("%d %d %f\n", rInt, bInt, sqrtf(squaredDistance));
 
-            pushQ(pq, rInt, bInt,  sqrtf(squaredDistance));
+            pushQ(pq, rInt, bInt,  sqrtf(squaredDistance), k);
 
             tempG = tempG->next; 
         }
@@ -228,22 +228,15 @@ int main(int argc, char **argv) {
         
         Node *pq = NULL; 
         
-        calculateDistances3D(dcd->x, dcd->y, dcd->z, 3, setA, setB, &pq);  
+        calculateDistances3D(dcd->x, dcd->y, dcd->z, k-1, setA, setB, &pq);  
 
-
-        int count = 0; 
-        while (!isEmpty(&pq) && count < 3) { 
-            Node *pk = peek(&pq);
-            printf("%d, %d, %d, %f\n", i, pk->a, pk->b, pk->priority); 
-            pop(&pq); 
-            count++;
-        } 
-
-        // cleaning up! 
-        while (!isEmpty(&pq)) 
-            pop(&pq); 
+        // while (!isEmpty(&pq)) { 
+        //     Node *pk = peek(&pq);
+        //     printf("%d, %d, %d, %f\n", i, pk->a, pk->b, pk->priority); 
+        //     pop(&pq); 
+        // } 
     
-        printf("\n");
+        // printf("\n");
 
 
         // printf("Timestep %d\n", i);

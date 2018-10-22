@@ -1,14 +1,14 @@
 #define _GNU_SOURCE
 #include <stdlib.h>
 #include <stdio.h>
-#include "includes/dcdplugin.c"
-#include "priority_queue.c"
-#include "linked_list.c"
+#include "../includes/dcdplugin.c"
+#include "../priority_queue.c"
+#include "../linked_list.c"
 #include <assert.h>
 #include <time.h>
 #include <omp.h>
 
-#define NUM_THREADS 8
+#define NUM_THREADS 4
 
 unsigned int_size = sizeof(int); 
 
@@ -89,9 +89,7 @@ void calculateDistances3D(float *Ax, float *Ay, float *Az, int k,
 
     #pragma omp parallel
     {   
-        int minA1, minA2, minA3;
-        int minB1, minB2, minB3; 
-        float minD1 = 99999999999, minD2 = 99999999999,  minD3 = 99999999999;  
+        Node * tQ = NULL; 
         // int nthrds = omp_get_num_threads();
         // if (omp_get_thread_num() == 0 ) nthreads = nthrds; 
 
@@ -111,38 +109,16 @@ void calculateDistances3D(float *Ax, float *Ay, float *Az, int k,
                 float squaredDistance = dx2 + dy2 + dz2;
                 squaredDistance = sqrtf(squaredDistance);
 
-                if (squaredDistance < minD1) {
-                    minD3 = minD2; 
-                    minA3 = minA2; 
-                    minB3 = minB2; 
-
-                    minD2 = minD1; 
-                    minA2 = minA1; 
-                    minB2 = minB1; 
-
-                    minD1 = squaredDistance;
-                    minA1 = aInd; 
-                    minB1 = bInd; 
-                } else if (squaredDistance < minD2) {
-                    minD3 = minD2; 
-                    minA3 = minA2; 
-                    minB3 = minB2; 
-
-                    minD2 = squaredDistance;
-                    minA2 = aInd;
-                    minB2 = bInd; 
-                } else if (squaredDistance < minD3) {
-                    minD3 = squaredDistance;
-                    minA3 = aInd;
-                    minB3 = bInd; 
-                }
+                pushQ(&tQ, aInd, bInd, squaredDistance, k);
             }
         }
 
         #pragma omp critical 
-        pushQ(pq, minA1, minB1,  minD1);
-        pushQ(pq, minA2, minB2,  minD2);
-        pushQ(pq, minA3, minB3,  minD3);
+        while (!isEmpty(&tQ)) { 
+            Node *pk = peek(&tQ);
+            pushQ(pq, pk->a, pk->b, pk->priority, pk->k); 
+            pop(&tQ); 
+        } 
         
     }
     // printf("NUMBER OF THREADS: %d\n", nthreads); 
@@ -248,6 +224,23 @@ int main(int argc, char **argv) {
     molfile_timestep_t timestep;
     timestep.coords = (float *) malloc(3 * sizeof(float) * natoms);
 
+
+    /* TESTING TESTING TESTING */ 
+    // Node *pq = NULL;
+
+    // for (int i = 0; i < 20; i++) {
+    //     pushQ(&pq, i, i, i, k-1);
+    // }
+
+    // while (!isEmpty(&pq)) { 
+    //     Node *pk = peek(&pq);
+    //     printf("%d, %d, %f\n", pk->a, pk->b, pk->priority); 
+    //     pop(&pq); 
+    //     count++;
+    // } 
+
+
+    /* TESTING TESTING TESTING */ 
     
 
     for (int i = 0; i < dcd->nsets; i++) {
@@ -270,23 +263,19 @@ int main(int argc, char **argv) {
         */
         int n = natoms; // > 10 ? 10 : natoms;
         
-        Node *pq = NULL; 
+        Node *pq = NULL;
         
-        calculateDistances3D(dcd->x, dcd->y, dcd->z, 3, setA, setB, aC, bC, &pq);  
 
-        int count = 0; 
-        while (!isEmpty(&pq) && count < 3) { 
+        // K-1 because that's the way the Queue works mates
+        calculateDistances3D(dcd->x, dcd->y, dcd->z, k-1, setA, setB, aC, bC, &pq);  
+
+        while (!isEmpty(&pq)) { 
             Node *pk = peek(&pq);
-            printf("%d, %d, %d, %f\n", i, pk->a, pk->b, pk->priority); 
+            // printf("%d, %d, %d, %f\n", i, pk->a, pk->b, pk->priority); 
             pop(&pq); 
-            count++;
         } 
-
-        // cleaning up! 
-        while (!isEmpty(&pq)) 
-            pop(&pq); 
     
-        printf("\n");
+        // printf("\n");
 
 
         // printf("Timestep %d\n", i);

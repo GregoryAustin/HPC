@@ -7,7 +7,6 @@
 typedef struct node { 
     
     int a;
-    int b;
 
     float priority;
 
@@ -16,11 +15,10 @@ typedef struct node {
 } Node; 
   
 // Function to Create A New Node 
-Node* newNode(int a, int b, float p) 
+Node* newNode(int a, float p) 
 { 
     Node* temp = (Node*)malloc(sizeof(Node)); 
     temp->a = a;
-    temp->b = b; 
     temp->priority = p; 
     temp->next = NULL; 
   
@@ -43,18 +41,20 @@ void pop(Node** head)
 } 
   
 // Function to push according to priority 
-void pushQ(Node** head, int a, int b, float p) 
+void pushQ(Node** head, int a, float p) 
 { 
-	if (*head == NULL) {
+
+    if (*head == NULL) {
         // printf("WHAT ");
-        *head = newNode(a,b, p); 
+        *head = newNode(a, p); 
 
         return; 
     }
+
     Node* start = (*head); 
   
     // Create new Node 
-    Node* temp = newNode(a,b, p); 
+    Node* temp = newNode(a, p); 
   
     // Special Case: The head of list has lesser 
     // priority than new node. So insert new 
@@ -64,7 +64,7 @@ void pushQ(Node** head, int a, int b, float p)
         // Insert New Node before head 
         temp->next = *head; 
         (*head) = temp; 
-    }
+    } 
     else { 
   
         // Traverse the list and find a 

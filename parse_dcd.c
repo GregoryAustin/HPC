@@ -3,20 +3,11 @@
 #include <stdio.h>
 #include "includes/dcdplugin.c"
 #include "priority_queue.c"
+#include "linked_list.c"
 #include <assert.h>
 #include <time.h>
 
-/*
-** Read and print first 10 timesteps and first 10 atoms per timestep in DCD files
-** Look at dcdplugin.c and molfie_plugin.h for struct definitions
-** The funtions called are very NOT thread safe, the following could cause data races:
-**      - A file handle remains open from open_dcd_read till close_file_read
-**      - dcd->x, dcd->y and dcd->z are overwritten each loop (among other properties)
-**      - timestep.coords are overwritten each loop
-**      - Probably other stuff? Also don't try to read the whole file into memory unless you have > 300GB of RAM
-**
-** If things start failing silently set NOISY to 1 on line 117 of dcdplugin.c (This might help or might not?)
-*/
+unsigned int_size = sizeof(int); 
 
 char** str_split(char* a_str, const char a_delim)
 {
@@ -66,20 +57,34 @@ char** str_split(char* a_str, const char a_delim)
     return result;
 }
 
+/*
+    Creates a LinkedList set given starting index and ending idnex  
+*/
+void createSet(int set_begin, int set_end, struct LNode** head_ref) {
+    int i; 
+    
+    for (i = set_end; i >= set_begin; --i) {
+        // printf("PUSHING"); 
+        push(head_ref, &i, int_size); 
+    }
+}
+
 void calculateDistances3D(float *Ax, float *Ay, float *Az, int k, 
-                          int begin_a, int end_a, int begin_b, int end_b,
+                          struct LNode* R, struct LNode* G,
                           Node **pq)
 {
     int i;
-
+    struct LNode * tempR = R; 
+    struct LNode * tempG = G;
     // begin_a--; end_a--; begin_b--; end_b--; 
-
-    for (i = begin_a; i <= end_a; i++) {
-        int j; 
-        for (j = begin_b; j <= end_b; j++) {
-            float dx = Ax[i] - Ax[j];
-            float dy = Ay[i] - Ay[j];
-            float dz = Az[i] - Az[j];
+    while (tempR != NULL) {
+        int rInt = *(int *) tempR->data;
+        tempG = G; 
+        while (tempG != NULL) {
+            int bInt = *(int *) tempG->data;
+            float dx = Ax[rInt] - Ax[bInt];
+            float dy = Ay[rInt] - Ay[bInt];
+            float dz = Az[rInt] - Az[bInt];
 
             float dx2 = dx * dx;
             float dy2 = dy * dy;
@@ -87,11 +92,14 @@ void calculateDistances3D(float *Ax, float *Ay, float *Az, int k,
 
             float squaredDistance = dx2 + dy2 + dz2;
 
-            push(pq, i, j, sqrtf(squaredDistance));
+            // printf("%d %d %f\n", rInt, bInt, sqrtf(squaredDistance));
 
+            pushQ(pq, rInt, bInt,  sqrtf(squaredDistance));
 
-            // pairs[i] = (pair) {i, j, sqrtf(squaredDistance)};
+            tempG = tempG->next; 
         }
+
+        tempR = tempR->next; 
     }
 }
 
@@ -171,7 +179,15 @@ int main(int argc, char **argv) {
     /***************************************************************/
     /**************** Done Reading Input File **********************/
     /***************************************************************/
-  
+  	
+
+  	struct LNode *setA = NULL; 
+    struct LNode *setB = NULL; 
+
+    createSet(a_begin, a_end, &setA); // THESE ARE 100s 
+    createSet(b_begin, b_end, &setB); // THESE ARE 100s 
+
+
     int natoms = 0;
     void *raw_data = open_dcd_read(dcdfile, "dcd", &natoms);//
     if (!raw_data) {
@@ -205,9 +221,9 @@ int main(int argc, char **argv) {
         */
         int n = natoms; // > 10 ? 10 : natoms;
         
-        Node *pq = newNode(1,1,999999); 
-        // printf("HERE");
-        calculateDistances3D(dcd->x, dcd->y, dcd->z, 3, a_begin, a_end, b_begin, b_end, &pq);  
+        Node *pq = NULL; 
+        
+        calculateDistances3D(dcd->x, dcd->y, dcd->z, 3, setA, setB, &pq);  
 
 
         int count = 0; 
@@ -228,7 +244,7 @@ int main(int argc, char **argv) {
         // printf("Timestep %d\n", i);
         // printf("i: x    y      z\n");
         
-        // if (i >= 10) break;
+        if (i >= 10) break;
     }
     free(timestep.coords);    
     close_file_read(raw_data);

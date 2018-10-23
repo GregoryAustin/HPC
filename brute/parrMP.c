@@ -365,7 +365,7 @@ int main(int argc, char **argv) {
         // printf("Timestep %d\n", i);
         // printf("i: x    y      z\n");
         
-        // if (i >= 8) break;
+        if (i >= 8) break;
     }
     free(timestep.coords);    
     close_file_read(raw_data);

@@ -16,10 +16,28 @@ typedef int bool;
 #define true 1
 #define false 0
 
-#define NUM_THREADS 8
+#define NUM_THREADS 4
 
 unsigned int_size = sizeof(int); 
 
+
+void getMinMax(float *axis, int * p1, int * p2, int fullSet[][2], int full) {
+    float maxV = -9999999999.9;
+    float minV = 9999999999.9;
+    float temp;  
+
+    for (int i = 0; i < full; ++i) {
+        temp = axis[fullSet[i][0]]; 
+        // printf("Temp: %f", temp);
+        if (temp >= maxV) {
+            maxV = temp; 
+            *p2 = fullSet[i][0];
+        } else if (temp <= minV) {
+            minV = temp; 
+            *p1 = fullSet[i][0];
+        }
+    }
+} 
 
 void calculateDistances3D(float *Ax, float *Ay, float *Az, int k, int fullSet[][2], int full, Node **pq) {
     float d1[full], d2[full], d3[full], d4[full], d5[full], d6[full], sum[full];
@@ -28,19 +46,13 @@ void calculateDistances3D(float *Ax, float *Ay, float *Az, int k, int fullSet[][
     int p1, p2, p3, p4, p5, p6; 
 
     // biggest and smallest value sorted by x
-    mergeSort2(Ax, fullSet, 0, full-1);
-    p1 = fullSet[0][0]; 
-    p2 = fullSet[full-1][0];
-
+    getMinMax(Ax, &p1, &p2,fullSet, full); 
+    
     // biggest and smallest value sorted by y
-    mergeSort2(Ay, fullSet, 0, full-1);
-    p3 = fullSet[0][0];
-    p4 = fullSet[full-1][0];
+    getMinMax(Ay, &p3, &p4, fullSet, full); 
 
     // biggest and smallest value sorted by z
-    mergeSort2(Az, fullSet, 0, full-1);
-    p5 = fullSet[0][0];
-    p6 = fullSet[full-1][0];
+    getMinMax(Az, &p5, &p6,fullSet, full); 
 
     //  Find distance of each point in p array from p1 and put its square in the d1 array. 
 
@@ -296,7 +308,7 @@ int main(int argc, char **argv) {
         int count = 0; 
         while (!isEmpty(&pq) && count < 3) { 
             Node *pk = peek(&pq);
-            // printf("%d, %d, %d, %f\n", i, pk->a, pk->b, sqrtf(pk->priority)); 
+            printf("%d, %d, %d, %f\n", i, pk->a, pk->b, sqrtf(pk->priority)); 
             pop(&pq); 
             count++;
         } 

@@ -10,6 +10,7 @@
 #include "mergeSort.c"
 #include "dynam_arr.c"
 #include "utility.c"
+// #include <limits.h>
 
 
 typedef int bool;
@@ -20,25 +21,42 @@ typedef int bool;
 
 unsigned int_size = sizeof(int); 
 
+void getMinMax(float *axis, int * p1, int * p2, int fullSet[][2], int full) {
+    float maxV = -9999999999.9;
+    float minV = 9999999999.9;
+    float temp;  
+
+
+    for (int i = 0; i < full; ++i) {
+        temp = axis[fullSet[i][0]]; 
+        // printf("Temp: %f", temp);
+        if (temp >= maxV) {
+            maxV = temp; 
+            *p2 = fullSet[i][0];
+        } else if (temp <= minV) {
+            minV = temp; 
+            *p1 = fullSet[i][0];
+        }
+    }
+} 
+
 
 void calculateDistances3D(float *Ax, float *Ay, float *Az, int k, int fullSet[][2], int full, Node **pq) {
     float d1[full], d2[full], d3[full], d4[full], d5[full], d6[full], sum[full];
     int index[full];
 
     // biggest and smallest value sorted by x
-    mergeSort2(Ax, fullSet, 0, full-1);
-    int p1 = fullSet[0][0]; 
-    int p2 = fullSet[full-1][0];
-
+    int p1, p2; 
+    getMinMax(Ax, &p1, &p2,fullSet, full); 
+    
     // biggest and smallest value sorted by y
-    mergeSort2(Ay, fullSet, 0, full-1);
-    int p3 = fullSet[0][0];
-    int p4 = fullSet[full-1][0];
+    int p3, p4; 
+    getMinMax(Ay, &p3, &p4, fullSet, full); 
 
     // biggest and smallest value sorted by z
-    mergeSort2(Az, fullSet, 0, full-1);
-    int p5 = fullSet[0][0];
-    int p6 = fullSet[full-1][0];
+    int p5, p6; 
+    getMinMax(Az, &p5, &p6,fullSet, full); 
+    
 
     //  Find distance of each point in p array from p1 and put its square in the d1 array. 
     for (int i = 0; i < full; ++i) 

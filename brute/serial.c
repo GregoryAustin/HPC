@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <time.h>
 #include <omp.h>
+#include "../dynam_arr.c"
 
 unsigned int_size = sizeof(int); 
 
@@ -61,15 +62,40 @@ char** str_split(char* a_str, const char a_delim)
 /*
     Creates a LinkedList set given starting index and ending idnex  
 */
-void createSet(int set_begin, int set_end, struct LNode** head_ref, int * count) {
-    int i; 
-    *count = 0; 
-    for (i = set_end; i >= set_begin; --i) {
-        // printf("PUSHING"); 
-        push(head_ref, &i, int_size);
-        *count += 1;  
+void createSet(Array begins, Array ends, Array solos, struct LNode** head_ref) {
+    // printf("Creating set... "); 
+
+    for (int i = 0; i < begins.used; ++i) {
+        for (int j = ends.array[i]; j >= begins.array[i]; --j) {
+            push(head_ref, &j, int_size); 
+
+        }
+        // printf("Created a range"); 
+    }
+
+    for (int i = 0; i < solos.used; ++i) {
+        push(head_ref, &(solos.array[i]), int_size); 
     }
 }
+
+// void createSet(Array begins, Array ends, Array solos, int list[]) {    
+
+//     int count = 0; 
+//     int size = 0; 
+
+//     for (int i = 0; i < begins.used; ++i){ 
+//         for (int j = 0; j <= (ends.array[i] - begins.array[i]); j++) {
+//             list[size+j] = begins.array[i]+j; 
+//         }
+//         size += ends.array[i] - begins.array[i] + 1; 
+//     }
+
+//     for (int i = 0; i < solos.used; ++i) {
+//         list[size+i] = solos.array[i];
+//     }
+    
+// }
+
 
 void calculateDistances3D(float *Ax, float *Ay, float *Az, int k, 
                           struct LNode* R, struct LNode* G,
@@ -106,6 +132,36 @@ void calculateDistances3D(float *Ax, float *Ay, float *Az, int k,
 }
 
 
+void getRangesAndItems(Array * begins, Array * ends, Array * solos, char ** tokens) {
+    int cRange = 0;
+    int items = 0;  
+    int c = 0; 
+    int begin, end;
+    while (*(tokens+c) != NULL) {
+        if (strpbrk(*(tokens+c), "-")) {
+            
+            char ** tokens2 = str_split(*(tokens+c), '-'); 
+
+            sscanf(*(tokens2), "%d", &begin);
+            sscanf(*(tokens2+1), "%d", &end);
+
+            insertArray(begins, begin); 
+            insertArray(ends, end); 
+            cRange++; 
+        } else {
+            int temp; 
+            // printf("Found no - in %s\n", *(tokens+c));
+            sscanf(*(tokens+c), "%d", &temp);
+
+            insertArray(solos, temp);  
+            items++; 
+        }
+
+        c++; 
+    }
+}
+
+
 
 int main(int argc, char **argv) {
     /***************************************************************/
@@ -136,7 +192,20 @@ int main(int argc, char **argv) {
         return 1;
 
     int count = 0; 
-    int k, a_begin, a_end, b_begin, b_end;
+    int k;
+
+    Array a_begins, b_begins; 
+    Array a_ends, b_ends; 
+    Array a_solos, b_solos; 
+
+    initArray(&a_begins, 1); 
+    initArray(&a_ends, 1); 
+    initArray(&b_begins, 1); 
+    initArray(&b_ends, 1); 
+    initArray(&a_solos, 4); 
+    initArray(&b_solos, 4); 
+
+
     char **tokens; 
     char *dcdfile; 
 
@@ -156,15 +225,11 @@ int main(int argc, char **argv) {
         } else if (count == 1)
             sscanf(buf, "%d", &k);
         else if (count == 2) {
-            //TODO: handle itemized list 
-            //TODO: handle ranges within itemized list 
-            tokens = str_split(buf, '-');
-            sscanf (*(tokens), "%d", &a_begin);
-            sscanf(*(tokens+1), "%d", &a_end);
+            tokens = str_split(buf, ',');
+            getRangesAndItems(&a_begins, &a_ends, &a_solos, tokens); 
         } else if (count == 3) {
-            tokens = str_split(buf, '-');
-            sscanf (*(tokens), "%d", &b_begin);
-            sscanf(*(tokens+1), "%d", &b_end);
+            tokens = str_split(buf, ',');
+            getRangesAndItems(&b_begins, &b_ends, &b_solos, tokens); 
         }
         // a little bit of mem mgmt
         if (count == 2 || count == 3) {
@@ -177,7 +242,30 @@ int main(int argc, char **argv) {
     // printf("input: %s", dcdfile);
 
 
-    printf("input: %s\nk: %d\nA: %d - %d\nB: %d - %d\n", dcdfile, k, a_begin, a_end, b_begin, b_end);
+    printf("input: %s\nk: %d\n", dcdfile, k);
+
+
+    printf("Set A: "); 
+
+    for (int i = 0; i < a_begins.used; ++i) {
+        printf("%d - %d, ", a_begins.array[i], a_ends.array[i]);
+    }
+
+    for (int i = 0; i < a_solos.used; ++i) {
+        printf("%d, ", a_solos.array[i]); 
+    }
+    printf("\n"); 
+
+    printf("Set B: "); 
+
+    for (int i = 0; i < b_begins.used; ++i) {
+        printf("%d - %d, ", b_begins.array[i], b_ends.array[i]);
+    }
+
+    for (int i = 0; i < b_solos.used; ++i) {
+        printf("%d, ", b_solos.array[i]); 
+    }
+    printf("\n"); 
 
     fclose(ptr_file);
     /***************************************************************/
@@ -186,11 +274,16 @@ int main(int argc, char **argv) {
   	
 
   	struct LNode *setA = NULL; 
-  	int countA = 0, countB = 0; 
     struct LNode *setB = NULL; 
 
-    createSet(a_begin, a_end, &setA, &countA); // THESE ARE 100s 
-    createSet(b_begin, b_end, &setB, &countB); // THESE ARE 100s 
+    // printf("about to create a set") ;
+
+    createSet(a_begins, a_ends, a_solos, &setA); // THESE ARE 100s 
+    createSet(b_begins, b_ends, b_solos, &setB); // THESE ARE 100s 
+
+    // printList(setA, printInt); 
+
+    // printList(setB, printInt); 
 
 
     int natoms = 0;
@@ -205,7 +298,7 @@ int main(int argc, char **argv) {
     timestep.coords = (float *) malloc(3 * sizeof(float) * natoms);
 
     
-
+    
     for (int i = 0; i < dcd->nsets; i++) {
         int rc = read_next_timestep(raw_data, natoms, &timestep);
         if (rc) {
@@ -246,7 +339,7 @@ int main(int argc, char **argv) {
     }
     free(timestep.coords);    
     close_file_read(raw_data);
-
+    
     run_time = omp_get_wtime() - start_time;
     printf("\n%lf seconds\n ",run_time);
     

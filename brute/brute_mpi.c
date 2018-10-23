@@ -7,7 +7,6 @@
 #include <assert.h>
 #include <time.h>
 #include <omp.h>
-#include "../dynam_arr.c"
 
 #define NUM_THREADS 4
 
@@ -71,22 +70,13 @@ char** str_split(char* a_str, const char a_delim)
 }
 
 /*
-    Creates a array[] set 
+    Creates a LinkedList set given starting index and ending idnex  
 */
-void createSet(Array begins, Array ends, Array solos, int list[]) {    
+void createSet(int set_begin, int set_end, int list[]) {    
 
-    int count = 0; 
-    int size = 0; 
-
-    for (int i = 0; i < begins.used; ++i){ 
-        for (int j = 0; j <= (ends.array[i] - begins.array[i]); j++) {
-            list[size+j] = begins.array[i]+j; 
-        }
-        size += ends.array[i] - begins.array[i] + 1; 
-    }
-
-    for (int i = 0; i < solos.used; ++i) {
-        list[size+i] = solos.array[i];
+    int i; 
+    for (i = 0; i <= (set_end - set_begin); i++) {
+        list[i] = set_begin+i; 
     }
     
 }
@@ -134,48 +124,6 @@ void calculateDistances3D(float *Ax, float *Ay, float *Az, int k,
     // printf("NUMBER OF THREADS: %d\n", nthreads); 
 }
 
-void getRangesAndItems(Array * begins, Array * ends, Array * solos, char ** tokens) {
-    int cRange = 0;
-    int items = 0;  
-    int c = 0; 
-    int begin, end;
-    while (*(tokens+c) != NULL) {
-        if (strpbrk(*(tokens+c), "-")) {
-            
-            char ** tokens2 = str_split(*(tokens+c), '-'); 
-
-            sscanf(*(tokens2), "%d", &begin);
-            sscanf(*(tokens2+1), "%d", &end);
-
-            insertArray(begins, begin); 
-            insertArray(ends, end); 
-            cRange++; 
-        } else {
-            int temp; 
-            // printf("Found no - in %s\n", *(tokens+c));
-            sscanf(*(tokens+c), "%d", &temp);
-
-            insertArray(solos, temp);  
-            items++; 
-        }
-
-        c++; 
-    }
-}
-
-int calculateSetSize(Array begins, Array ends, Array solos) {
-    int count = 0; 
-
-    for (int i = 0; i < begins.used; ++i) 
-        count +=  ends.array[i] - begins.array[i] + 1;
-
-    for (int i = 0; i < solos.used; ++i) 
-        count += 1; 
-
-    return count; 
-}
-            
-
 int main(int argc, char **argv) {
 
     double start_time, run_time;
@@ -206,25 +154,14 @@ int main(int argc, char **argv) {
         return 1;
 
     int count = 0; 
-    int k;
-
-    Array a_begins, b_begins; 
-    Array a_ends, b_ends; 
-    Array a_solos, b_solos; 
-
-    initArray(&a_begins, 1); 
-    initArray(&a_ends, 1); 
-    initArray(&b_begins, 1); 
-    initArray(&b_ends, 1); 
-    initArray(&a_solos, 4); 
-    initArray(&b_solos, 4); 
-
+    int k, a_begin, a_end, b_begin, b_end;
     char **tokens; 
     char *dcdfile; 
 
     while (fgets(buf,1000, ptr_file)!=NULL) {
         if (count == 0) {
             int c = 0; 
+
 
             dcdfile = malloc(sizeof(char*) * strlen(buf));
              while (buf[c] != '\0' && buf[c] != '\n') {
@@ -237,11 +174,15 @@ int main(int argc, char **argv) {
         } else if (count == 1)
             sscanf(buf, "%d", &k);
         else if (count == 2) {
-            tokens = str_split(buf, ',');
-            getRangesAndItems(&a_begins, &a_ends, &a_solos, tokens); 
+            //TODO: handle itemized list 
+            //TODO: handle ranges within itemized list 
+            tokens = str_split(buf, '-');
+            sscanf (*(tokens), "%d", &a_begin);
+            sscanf(*(tokens+1), "%d", &a_end);
         } else if (count == 3) {
-            tokens = str_split(buf, ',');
-            getRangesAndItems(&b_begins, &b_ends, &b_solos, tokens); 
+            tokens = str_split(buf, '-');
+            sscanf (*(tokens), "%d", &b_begin);
+            sscanf(*(tokens+1), "%d", &b_end);
         }
         // a little bit of mem mgmt
         if (count == 2 || count == 3) {
@@ -254,46 +195,21 @@ int main(int argc, char **argv) {
     // printf("input: %s", dcdfile);
 
 
-    printf("input: %s\nk: %d\n", dcdfile, k);
-
-    printf("Set A: "); 
-
-    for (int i = 0; i < a_begins.used; ++i) {
-        printf("%d - %d, ", a_begins.array[i], a_ends.array[i]);
-    }
-
-    for (int i = 0; i < a_solos.used; ++i) {
-        printf("%d, ", a_solos.array[i]); 
-    }
-    printf("\n"); 
-
-    printf("Set B: "); 
-
-    for (int i = 0; i < b_begins.used; ++i) {
-        printf("%d - %d, ", b_begins.array[i], b_ends.array[i]);
-    }
-
-    for (int i = 0; i < b_solos.used; ++i) {
-        printf("%d, ", b_solos.array[i]); 
-    }
-    printf("\n"); 
+    printf("input: %s\nk: %d\nA: %d - %d\nB: %d - %d\n", dcdfile, k, a_begin, a_end, b_begin, b_end);
 
     fclose(ptr_file);
     /***************************************************************/
     /**************** Done Reading Input File **********************/
     /***************************************************************/
   	
-    int aC = calculateSetSize(a_begins, a_ends, a_solos); 
-    int bC = calculateSetSize(b_begins, b_ends, b_solos);
+    int aC = a_end - a_begin + 1;  
+    int bC = b_end - b_begin + 1; 
 
-    printf("aC size: %d\n", aC);
-    printf("bC size: %d\n", bC);
-
-    int setA[aC]; 
+  	int setA[aC]; 
     int setB[bC]; 
     
-    createSet(a_begins, a_ends, a_solos, setA); 
-    createSet(b_begins, b_ends, b_solos, setB); 
+    createSet(a_begin, a_end, setA); 
+    createSet(b_begin, b_end, setB); 
 
     omp_set_num_threads(NUM_THREADS); 
 
@@ -309,7 +225,7 @@ int main(int argc, char **argv) {
     timestep.coords = (float *) malloc(3 * sizeof(float) * natoms);
 
 
-    /* TESTING TESTING TESTING  
+    /* TESTING TESTING TESTING */ 
     // Node *pq = NULL;
 
     // for (int i = 0; i < 20; i++) {
@@ -326,7 +242,7 @@ int main(int argc, char **argv) {
 
     /* TESTING TESTING TESTING */ 
     
-    
+
     for (int i = 0; i < dcd->nsets; i++) {
         int rc = read_next_timestep(raw_data, natoms, &timestep);
         if (rc) {
@@ -355,7 +271,7 @@ int main(int argc, char **argv) {
 
         while (!isEmpty(&pq)) { 
             Node *pk = peek(&pq);
-            printf("%d, %d, %d, %f\n", i, pk->a, pk->b, pk->priority); 
+            // printf("%d, %d, %d, %f\n", i, pk->a, pk->b, pk->priority); 
             pop(&pq); 
         } 
     
@@ -369,7 +285,7 @@ int main(int argc, char **argv) {
     }
     free(timestep.coords);    
     close_file_read(raw_data);
-    
+
     run_time = omp_get_wtime() - start_time;
     printf("\n%lf seconds\n ",run_time);
     return 0;

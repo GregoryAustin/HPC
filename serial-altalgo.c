@@ -93,7 +93,9 @@ void calculateDistances3D(float *Ax, float *Ay, float *Az, int k, int fullSet[][
     mergeSort1(sum, index, 0, full-1); 
 
     // print_array_axis(sum, index, full);
-    int lookAhead = 100 * sqrt(k); 
+    int lookAhead = 100; 
+    if (k != 0)
+        lookAhead = 100 * sqrt(k); 
 
     // TODO: priority queue with fixed size 
     float smallest = 999999999.9;
@@ -108,8 +110,10 @@ void calculateDistances3D(float *Ax, float *Ay, float *Az, int k, int fullSet[][
                 float newPoint = getSquaredDistance(Ax[pointA], Ax[pointB], Ay[pointA], Ay[pointB], Az[pointA], Az[pointB]);
 
                 if (fullSet[index[i]][1] == 0) {
+                    // printf("Value of k: %d", k); 
                     pushQ(pq, fullSet[index[i]][0], fullSet[index[j]][0], newPoint, k);
                 } else {
+                    // printf("Value of k: %d", k); 
                     pushQ(pq, fullSet[index[j]][0], fullSet[index[i]][0], newPoint, k);
                 }
             }
@@ -152,9 +156,11 @@ int main(int argc, char **argv) {
 
     ptr_file = fopen(input_file, "r");
 
-    if (!ptr_file)
+    if (!ptr_file) {
+	   printf("NO SUCH FILE AS THE GIVEN INPUT\n"); 
         return 1;
 
+	}
     int count = 0; 
     int k;
 
@@ -175,16 +181,21 @@ int main(int argc, char **argv) {
     while (fgets(buf,1000, ptr_file)!=NULL) {
         if (count == 0) {
             int c = 0; 
+            int cS = 0; 
 
 
             dcdfile = malloc(sizeof(char*) * strlen(buf));
-             while (buf[c] != '\0' && buf[c] != '\n') {
-                dcdfile[c] = buf[c];
+             while (buf[c] != '\0') {
+                if (buf[c] != '\n') {
+                    dcdfile[cS++] = buf[c];
+                }
                 c++;
              }
              // this gets rid of a line break before the \0 character
              // TODO: a safer way to do this (ignore \n's) 
-             dcdfile[c-1] = '\0';
+             dcdfile[cS-1] = '\0';
+
+             printf("%s", dcdfile); 
         } else if (count == 1)
             sscanf(buf, "%d", &k);
         else if (count == 2) {
@@ -284,8 +295,6 @@ int main(int argc, char **argv) {
             fprintf(stderr, "error in read_next_timestep on frame %d\n", i);
             return 1;
         }
-
-        int n = natoms;
         
         Node *pq = NULL; 
         
@@ -300,7 +309,6 @@ int main(int argc, char **argv) {
         // cleaning up! 
         while (!isEmpty(&pq)) 
             pop(&pq); 
-
         
         // if (i >= 8) break;
     }

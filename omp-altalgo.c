@@ -98,8 +98,9 @@ void calculateDistances3D(float *Ax, float *Ay, float *Az, int k, int fullSet[][
         // #pragma omp task 
    mergeSort1(sum, index, 0, full-1); 
     
-    
-    int lookAhead = 100 * sqrt(k); 
+    int lookAhead = 100; 
+    if (k != 0)
+        lookAhead = 100 * sqrt(k); 
 
     // TODO: priority queue with fixed size 
 

@@ -53,6 +53,19 @@ void pushQ(Node** head, int a, int b, float p, int k)
 
         return; 
     }
+
+    if (k == 0) {
+        // printf("k = 0"); 
+        if ((*head)->priority > p) {
+            free(*head); 
+            *head = newNode(a,b,p,k); 
+        }
+        
+
+        return;
+    }
+
+
     Node* start = (*head); 
   
     // Create new Node 

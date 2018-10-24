@@ -323,11 +323,11 @@ int main(int argc, char **argv) {
         
         calculateDistances3D(dcd->x, dcd->y, dcd->z, k-1, setA, setB, &pq);  
 
-        // while (!isEmpty(&pq)) { 
-        //     Node *pk = peek(&pq);
-        //     printf("%d, %d, %d, %f\n", i, pk->a, pk->b, pk->priority); 
-        //     pop(&pq); 
-        // } 
+        while (!isEmpty(&pq)) { 
+            Node *pk = peek(&pq);
+            printf("%d, %d, %d, %f\n", i, pk->a, pk->b, pk->priority); 
+            pop(&pq); 
+        } 
     
         // printf("\n");
 

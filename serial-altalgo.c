@@ -17,7 +17,6 @@ typedef int bool;
 #define true 1
 #define false 0
 
-#define NUM_THREADS 8
 
 unsigned int_size = sizeof(int); 
 
@@ -94,14 +93,14 @@ void calculateDistances3D(float *Ax, float *Ay, float *Az, int k, int fullSet[][
     mergeSort1(sum, index, 0, full-1); 
 
     // print_array_axis(sum, index, full);
-    int lookAhead = 100; 
-    
+    int lookAhead = 100 * sqrt(k); 
 
     // TODO: priority queue with fixed size 
     float smallest = 999999999.9;
     int pA, pB; 
     for (int i = 0; i < full; ++i) {
-        for (int j = i+1; j <= i+100 && j < full; ++j) {
+        for (int a = 1; a <= lookAhead && a+i < full; ++a) {
+            int j = a+i; 
             int pointA = fullSet[index[i]][0];
             int pointB = fullSet[index[j]][0];  
             if(fullSet[index[i]][1] != fullSet[index[j]][1]) {
@@ -133,6 +132,7 @@ int main(int argc, char **argv) {
 
     char *input_file; 
     char *output_file; 
+
     for(int i=0; i<argc; ++i)
     {   
         if (!strcmp(argv[i], "-i")) {
@@ -141,11 +141,14 @@ int main(int argc, char **argv) {
         } else if (!strcmp(argv[i], "-o")) {
             if (i+1 < argc) 
                 output_file = argv[i+1];
-        }
+        } 
     }
 
     FILE *ptr_file; 
     char buf[1000];
+
+    FILE *output;
+    output = fopen(output_file, "w");
 
     ptr_file = fopen(input_file, "r");
 
@@ -201,29 +204,29 @@ int main(int argc, char **argv) {
     }
     // printf("input: %s", dcdfile);
 
-    printf("input: %s\nk: %d\n", dcdfile, k);
+    // printf("input: %s\nk: %d\n", dcdfile, k);
 
-    printf("Set A: "); 
+    // printf("Set A: "); 
 
-    for (int i = 0; i < a_begins.used; ++i) {
-        printf("%d - %d, ", a_begins.array[i], a_ends.array[i]);
-    }
+    // for (int i = 0; i < a_begins.used; ++i) {
+    //     printf("%d - %d, ", a_begins.array[i], a_ends.array[i]);
+    // }
 
-    for (int i = 0; i < a_solos.used; ++i) {
-        printf("%d, ", a_solos.array[i]); 
-    }
-    printf("\n"); 
+    // for (int i = 0; i < a_solos.used; ++i) {
+    //     printf("%d, ", a_solos.array[i]); 
+    // }
+    // printf("\n"); 
 
-    printf("Set B: "); 
+    // printf("Set B: "); 
 
-    for (int i = 0; i < b_begins.used; ++i) {
-        printf("%d - %d, ", b_begins.array[i], b_ends.array[i]);
-    }
+    // for (int i = 0; i < b_begins.used; ++i) {
+    //     printf("%d - %d, ", b_begins.array[i], b_ends.array[i]);
+    // }
 
-    for (int i = 0; i < b_solos.used; ++i) {
-        printf("%d, ", b_solos.array[i]); 
-    }
-    printf("\n"); 
+    // for (int i = 0; i < b_solos.used; ++i) {
+    //     printf("%d, ", b_solos.array[i]); 
+    // }
+    // printf("\n"); 
 
     fclose(ptr_file);
     /***************************************************************/
@@ -233,8 +236,8 @@ int main(int argc, char **argv) {
     int aC = calculateSetSize(a_begins, a_ends, a_solos); 
     int bC = calculateSetSize(b_begins, b_ends, b_solos);
 
-    printf("aC size: %d\n", aC);
-    printf("bC size: %d\n", bC);
+    // printf("aC size: %d\n", aC);
+    // printf("bC size: %d\n", bC);
 
   	int setA[aC][2]; 
     int setB[bC][2]; 
@@ -260,12 +263,12 @@ int main(int argc, char **argv) {
     // printf("Combined sets");
     // print_array2(full, aC + bC);
 
-    omp_set_num_threads(NUM_THREADS); 
+    // omp_set_num_threads(NUM_THREADS); 
 
     int natoms = 0;
     void *raw_data = open_dcd_read(dcdfile, "dcd", &natoms);//
     if (!raw_data) {
-        printf("Please enter a valid name for the dcd file \n");//
+        fprintf(stderr, "Please enter a valid name for the dcd file \n");//
         return 1;
     }
     dcdhandle *dcd = (dcdhandle *) raw_data;//
@@ -286,14 +289,12 @@ int main(int argc, char **argv) {
         
         Node *pq = NULL; 
         
-        calculateDistances3D(dcd->x, dcd->y, dcd->z, k, full, aC+bC, &pq);  
+        calculateDistances3D(dcd->x, dcd->y, dcd->z, k-1, full, aC+bC, &pq);  
 
-        int count = 0; 
-        while (!isEmpty(&pq) && count < 3) { 
+        while (!isEmpty(&pq)) { 
             Node *pk = peek(&pq);
-            // printf("%d, %d, %d, %f\n", i, pk->a, pk->b, sqrtf(pk->priority)); 
+            fprintf(output, "%d, %d, %d, %f\n", i, pk->a, pk->b, sqrtf(pk->priority)); 
             pop(&pq); 
-            count++;
         } 
 
         // cleaning up! 
@@ -307,7 +308,10 @@ int main(int argc, char **argv) {
     close_file_read(raw_data);
 
     run_time = omp_get_wtime() - start_time;
-    printf("\n%lf seconds\n ",run_time);
+    fprintf(output, "\n%lf seconds\n ",run_time);
+
+    fclose(output); 
+
     return 0;
 
 }

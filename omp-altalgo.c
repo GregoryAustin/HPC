@@ -99,7 +99,7 @@ void calculateDistances3D(float *Ax, float *Ay, float *Az, int k, int fullSet[][
    mergeSort1(sum, index, 0, full-1); 
     
     
-    
+    int lookAhead = 100 * sqrt(k); 
 
     // TODO: priority queue with fixed size 
 
@@ -109,7 +109,7 @@ void calculateDistances3D(float *Ax, float *Ay, float *Az, int k, int fullSet[][
 
         #pragma omp for schedule(dynamic) nowait
         for (int i = 0; i < full; ++i) {
-            for (int a = 1; a <= 100 && a+i < full; ++a) {
+            for (int a = 1; a <= lookAhead && a+i < full; ++a) {
                 int j = a+i; 
 
                 int pointA = fullSet[index[i]][0];
@@ -150,6 +150,8 @@ int main(int argc, char **argv) {
 
     char *input_file; 
     char *output_file; 
+    int nthreads = 0; 
+
     for(int i=0; i<argc; ++i)
     {   
         if (!strcmp(argv[i], "-i")) {
@@ -158,6 +160,9 @@ int main(int argc, char **argv) {
         } else if (!strcmp(argv[i], "-o")) {
             if (i+1 < argc) 
                 output_file = argv[i+1];
+        } else if (!strcmp(argv[i], "-n")) {
+            if (i+1 < argc)
+                nthreads = atoi(argv[i+1]);
         }
     }
 
@@ -165,6 +170,9 @@ int main(int argc, char **argv) {
     char buf[1000];
 
     ptr_file = fopen(input_file, "r");
+
+    FILE *output;
+    output = fopen(output_file, "w");
 
     if (!ptr_file)
         return 1;
@@ -189,7 +197,6 @@ int main(int argc, char **argv) {
     while (fgets(buf,1000, ptr_file)!=NULL) {
         if (count == 0) {
             int c = 0; 
-
 
             dcdfile = malloc(sizeof(char*) * strlen(buf));
              while (buf[c] != '\0' && buf[c] != '\n') {
@@ -219,29 +226,29 @@ int main(int argc, char **argv) {
     // printf("input: %s", dcdfile);
 
 
-    printf("input: %s\nk: %d\n", dcdfile, k);
+    // printf("input: %s\nk: %d\n", dcdfile, k);
 
-    printf("Set A: "); 
+    // printf("Set A: "); 
 
-    for (int i = 0; i < a_begins.used; ++i) {
-        printf("%d - %d, ", a_begins.array[i], a_ends.array[i]);
-    }
+    // for (int i = 0; i < a_begins.used; ++i) {
+    //     printf("%d - %d, ", a_begins.array[i], a_ends.array[i]);
+    // }
 
-    for (int i = 0; i < a_solos.used; ++i) {
-        printf("%d, ", a_solos.array[i]); 
-    }
-    printf("\n"); 
+    // for (int i = 0; i < a_solos.used; ++i) {
+    //     printf("%d, ", a_solos.array[i]); 
+    // }
+    // printf("\n"); 
 
-    printf("Set B: "); 
+    // printf("Set B: "); 
 
-    for (int i = 0; i < b_begins.used; ++i) {
-        printf("%d - %d, ", b_begins.array[i], b_ends.array[i]);
-    }
+    // for (int i = 0; i < b_begins.used; ++i) {
+    //     printf("%d - %d, ", b_begins.array[i], b_ends.array[i]);
+    // }
 
-    for (int i = 0; i < b_solos.used; ++i) {
-        printf("%d, ", b_solos.array[i]); 
-    }
-    printf("\n"); 
+    // for (int i = 0; i < b_solos.used; ++i) {
+    //     printf("%d, ", b_solos.array[i]); 
+    // }
+    // printf("\n"); 
 
     fclose(ptr_file);
     /***************************************************************/
@@ -251,8 +258,8 @@ int main(int argc, char **argv) {
     int aC = calculateSetSize(a_begins, a_ends, a_solos); 
     int bC = calculateSetSize(b_begins, b_ends, b_solos);
 
-    printf("aC size: %d\n", aC);
-    printf("bC size: %d\n", bC);
+    // printf("aC size: %d\n", aC);
+    // printf("bC size: %d\n", bC);
 
     int setA[aC][2]; 
     int setB[bC][2]; 
@@ -277,13 +284,15 @@ int main(int argc, char **argv) {
     }
     // printf("Combined sets");
     // print_array2(full, aC + bC);
-
-    omp_set_num_threads(NUM_THREADS); 
+    if (nthreads > 0)
+        omp_set_num_threads(nthreads); 
+    else 
+        omp_set_num_threads(NUM_THREADS);
 
     int natoms = 0;
     void *raw_data = open_dcd_read(dcdfile, "dcd", &natoms);//
     if (!raw_data) {
-        printf("Please enter a valid name for the dcd file \n");//
+        fprintf(stderr, "Please enter a valid name for the dcd file \n");//
         return 1;
     }
     dcdhandle *dcd = (dcdhandle *) raw_data;//
@@ -303,14 +312,12 @@ int main(int argc, char **argv) {
         int n = natoms; // > 10 ? 10 : natoms;
         
         Node *pq = NULL; 
-        calculateDistances3D(dcd->x, dcd->y, dcd->z, k, full, aC+bC, &pq);  
+        calculateDistances3D(dcd->x, dcd->y, dcd->z, k-1, full, aC+bC, &pq);  
 
-        int count = 0; 
-        while (!isEmpty(&pq) && count < 3) { 
+        while (!isEmpty(&pq)) { 
             Node *pk = peek(&pq);
-            printf("%d, %d, %d, %f\n", i, pk->a, pk->b, sqrtf(pk->priority)); 
+            fprintf(output, "%d, %d, %d, %f\n", i, pk->a, pk->b, sqrtf(pk->priority)); 
             pop(&pq); 
-            count++;
         } 
 
         // cleaning up! 
@@ -322,7 +329,8 @@ int main(int argc, char **argv) {
     close_file_read(raw_data);
 
     run_time = omp_get_wtime() - start_time;
-    printf("\n%lf seconds\n ",run_time);
+    fprintf(output, "\n%lf seconds\n ",run_time);
+    fclose(output); 
     return 0;
 
 }

@@ -1,24 +1,28 @@
 #define _GNU_SOURCE
+// Author: Wes Kendall
+// Copyright 2012 www.mpitutorial.com
+// This code is provided freely with the tutorials on mpitutorial.com. Feel
+// free to modify it for your own use. Any distribution of the code must
+// either provide a link to www.mpitutorial.com or keep this header intact.
+//
+// Program that computes the average of an array of elements in parallel using
+// MPI_Scatter and MPI_Gather
+//
 #include <stdlib.h>
 #include <stdio.h>
 #include "includes/dcdplugin.c"
 #include "includes/priority_queue.c"
 #include "includes/linked_list.c"
 #include <assert.h>
-#include <time.h>
-#include <omp.h>
+// #include <omp.h>
 #include "includes/mergeSort.c"
 #include "includes/dynam_arr.c"
 #include "includes/utility.c"
-// #include <limits.h>
 
+#include <time.h>
+#include <mpi.h>
+// #include <assert.h>
 
-typedef int bool;
-#define true 1
-#define false 0
-
-
-unsigned int_size = sizeof(int); 
 
 void getMinMax(float *axis, int * p1, int * p2, int fullSet[][2], int full) {
     float maxV = -9999999999.9;
@@ -94,8 +98,10 @@ void calculateDistances3D(float *Ax, float *Ay, float *Az, int k, int fullSet[][
 
     // print_array_axis(sum, index, full);
     int lookAhead = 100; 
-    if (k != 0)
-        lookAhead = 100 * sqrt(k); 
+    if (k != 0) 
+      lookAhead *= sqrt(k);  
+
+    // int lookAhead = 100 * sqrt(k); 
 
     // TODO: priority queue with fixed size 
     float smallest = 999999999.9;
@@ -110,10 +116,8 @@ void calculateDistances3D(float *Ax, float *Ay, float *Az, int k, int fullSet[][
                 float newPoint = getSquaredDistance(Ax[pointA], Ax[pointB], Ay[pointA], Ay[pointB], Az[pointA], Az[pointB]);
 
                 if (fullSet[index[i]][1] == 0) {
-                    // printf("Value of k: %d", k); 
                     pushQ(pq, fullSet[index[i]][0], fullSet[index[j]][0], newPoint, k);
                 } else {
-                    // printf("Value of k: %d", k); 
                     pushQ(pq, fullSet[index[j]][0], fullSet[index[i]][0], newPoint, k);
                 }
             }
@@ -126,17 +130,31 @@ void calculateDistances3D(float *Ax, float *Ay, float *Az, int k, int fullSet[][
 }
 
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
+  // if (argc != 2) {
+  //   fprintf(stderr, "Usage: avg num_elements_per_proc\n");
+  //   exit(1);
+  // }
 
-    double start_time, run_time;
-    start_time = omp_get_wtime();
-    /***************************************************************/
-    /**********************Reading Input File **********************/
-    /***************************************************************/
+  int num_elements_per_proc = -1;
+  // Seed the random number generator to get different results each time
+  // srand(time(NULL));
 
+  MPI_Init(NULL, NULL);
+
+  int world_rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+  int world_size;
+  MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+
+  // DONE: calculate num_elements_per_proc using dcd->size and world_size; 
+  // TODO: use scatterv instead because we need them split up nicely to all procs. 
+  // nows the time to read in the input_file value 
+  // DataPack ** dataPacks  = NULL;
+  
     char *input_file; 
     char *output_file; 
-
+    // getting input file name
     for(int i=0; i<argc; ++i)
     {   
         if (!strcmp(argv[i], "-i")) {
@@ -150,17 +168,15 @@ int main(int argc, char **argv) {
 
     FILE *ptr_file; 
     char buf[1000];
-
-    FILE *output;
-    output = fopen(output_file, "w");
-
+    // opening the input file 
     ptr_file = fopen(input_file, "r");
 
     if (!ptr_file) {
-	   printf("NO SUCH FILE AS THE GIVEN INPUT\n"); 
+        printf("NO SUCH FILE AS THE GIVEN INPUT\n"); 
         return 1;
+    }
 
-	}
+    // reading in the set values 
     int count = 0; 
     int k;
 
@@ -185,17 +201,17 @@ int main(int argc, char **argv) {
 
 
             dcdfile = malloc(sizeof(char*) * strlen(buf));
+            //TODO: change this before you upload this dink
              while (buf[c] != '\0') {
                 if (buf[c] != '\n') {
                     dcdfile[cS++] = buf[c];
                 }
                 c++;
              }
-             // this gets rid of a line break before the \0 character
-             // TODO: a safer way to do this (ignore \n's) 
+
              dcdfile[cS-1] = '\0';
 
-             printf("%s", dcdfile); 
+             // printf("%s", dcdfile); 
         } else if (count == 1)
             sscanf(buf, "%d", &k);
         else if (count == 2) {
@@ -213,54 +229,23 @@ int main(int argc, char **argv) {
         }
         count++; 
     }
-    // printf("input: %s", dcdfile);
-
-    // printf("input: %s\nk: %d\n", dcdfile, k);
-
-    // printf("Set A: "); 
-
-    // for (int i = 0; i < a_begins.used; ++i) {
-    //     printf("%d - %d, ", a_begins.array[i], a_ends.array[i]);
-    // }
-
-    // for (int i = 0; i < a_solos.used; ++i) {
-    //     printf("%d, ", a_solos.array[i]); 
-    // }
-    // printf("\n"); 
-
-    // printf("Set B: "); 
-
-    // for (int i = 0; i < b_begins.used; ++i) {
-    //     printf("%d - %d, ", b_begins.array[i], b_ends.array[i]);
-    // }
-
-    // for (int i = 0; i < b_solos.used; ++i) {
-    //     printf("%d, ", b_solos.array[i]); 
-    // }
-    // printf("\n"); 
-
+    // closing the input file ! 
     fclose(ptr_file);
-    /***************************************************************/
-    /**************** Done Reading Input File **********************/
-    /***************************************************************/
-  	
+
+    // using our inputs to calculate the set sizes !
     int aC = calculateSetSize(a_begins, a_ends, a_solos); 
     int bC = calculateSetSize(b_begins, b_ends, b_solos);
 
-    // printf("aC size: %d\n", aC);
-    // printf("bC size: %d\n", bC);
-
-  	int setA[aC][2]; 
+    int setA[aC][2]; 
     int setB[bC][2]; 
 
-    
-    // printf("About to create sets%d", fSize);;
     createSet(a_begins, a_ends, a_solos,0, setA); 
     createSet(b_begins, b_ends, b_solos,1, setB); 
 
     // print_array2(setB, bC); 
     
-    int full[aC+bC][2];  //array_concat(setA, aC, setB, bC, int_size); 
+    // concatenating into one full set baby! 
+    int full[aC+bC][2];  
 
     for (int i = 0; i < aC; i++) {
         full[i][0] = setA[i][0];
@@ -271,10 +256,6 @@ int main(int argc, char **argv) {
         full[aC+i][0] = setB[i][0];
         full[aC+i][1] = setB[i][1];
     }
-    // printf("Combined sets");
-    // print_array2(full, aC + bC);
-
-    // omp_set_num_threads(NUM_THREADS); 
 
     int natoms = 0;
     void *raw_data = open_dcd_read(dcdfile, "dcd", &natoms);//
@@ -286,40 +267,95 @@ int main(int argc, char **argv) {
 
     molfile_timestep_t timestep;
     timestep.coords = (float *) malloc(3 * sizeof(float) * natoms);
-
+    int sets = dcd->nsets; 
+    // THIS IS IMPORTANT
+    // THIS CONTAINS ALL PACKS 
     
+    // THIS IS IMPORTANT 
 
+    num_elements_per_proc = sets/world_size;
+
+
+    // dataPacks = malloc(num_elements_per_proc * sizeof(DataPack)); 
+
+    int startForThisProc = (world_rank) * num_elements_per_proc; 
+    int endForThisProc = (world_rank+1) * num_elements_per_proc; 
+
+    Node **listPQ = malloc(num_elements_per_proc * sizeof(Node)); 
+
+    int leftOvers = dcd->nsets - (world_size*num_elements_per_proc); 
+
+    int cont = 0; 
     for (int i = 0; i < dcd->nsets; i++) {
         int rc = read_next_timestep(raw_data, natoms, &timestep);
         if (rc) {
             fprintf(stderr, "error in read_next_timestep on frame %d\n", i);
             return 1;
         }
+        if ( i >= startForThisProc && i < endForThisProc) {
+          // printf("THIS IS HAPPENING HERE");
+          calculateDistances3D(dcd->x, dcd->y, dcd->z, k-1, full, aC+bC, &(listPQ[cont]));
+          cont++; 
+        }
         
-        Node *pq = NULL; 
-        
-        calculateDistances3D(dcd->x, dcd->y, dcd->z, k-1, full, aC+bC, &pq);  
-
-        while (!isEmpty(&pq)) { 
-            Node *pk = peek(&pq);
-            fprintf(output, "%d, %d, %d, %f\n", i, pk->a, pk->b, sqrtf(pk->priority)); 
-            pop(&pq); 
-        } 
-
-        // cleaning up! 
-        while (!isEmpty(&pq)) 
-            pop(&pq); 
-        
-        // if (i >= 8) break;
+        if (world_rank == world_size-1) {
+           if (i >= endForThisProc && i <= dcd->nsets) {
+            // printf("SO THIS HAPPENED");
+            calculateDistances3D(dcd->x, dcd->y, dcd->z, k-1, full, aC+bC, &(listPQ[cont]));
+            cont++; 
+           }
+        }
     }
+
+    MPI_Barrier(MPI_COMM_WORLD); 
     free(timestep.coords);    
     close_file_read(raw_data);
 
-    run_time = omp_get_wtime() - start_time;
-    fprintf(output, "\n%lf seconds\n ",run_time);
+    FILE *output;
+    
+    for (int i = 0; i < world_size; i++) {
+      MPI_Barrier(MPI_COMM_WORLD); 
 
-    fclose(output); 
+      if (i == world_rank) {
+        if (world_rank == 0)
+          output = fopen(output_file, "w");
+        else 
+          output = fopen(output_file, "a+");
+        // printf("Its me proc %d", world_rank);
+        for (int i = 0; i < num_elements_per_proc; i++) {
 
-    return 0;
+          while (!isEmpty(&(listPQ[i]))) { 
+            // printf("%d\n", i+(startForThisProc));
 
+            Node *pk = peek(&(listPQ[i]));
+            // printf("This is happening") ;
+            fprintf(output, "\n%d, %d, %d, %f", i+startForThisProc, pk->a, pk->b, sqrtf(pk->priority)); 
+
+            // printf("\n%d, %d, %d, %f", i+startForThisProc, pk->a, pk->b, sqrtf(pk->priority));
+            pop(&(listPQ[i])); 
+          } 
+          // MPI_Barrier(MPI_COMM_WORLD); 
+        }
+        if (world_rank == world_size-1) {
+          for (int i = num_elements_per_proc; i < num_elements_per_proc + leftOvers; i++) {
+             while (!isEmpty(&(listPQ[i]))) { 
+              // printf("%d\n", i+(startForThisProc));
+
+              Node *pk = peek(&(listPQ[i]));
+              // printf("This is happening") ;
+              fprintf(output, "\n%d, %d, %d, %f", i+startForThisProc, pk->a, pk->b, sqrtf(pk->priority)); 
+
+              // printf("\n%d, %d, %d, %f", i+startForThisProc, pk->a, pk->b, sqrtf(pk->priority));
+              pop(&(listPQ[i])); 
+            } 
+          }
+        }
+
+        fclose(output); 
+      }
+      // MPI_Barrier(MPI_COMM_WORLD);  
+    }
+    
+  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Finalize();
 }

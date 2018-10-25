@@ -1,4 +1,4 @@
-example_pn3_10RU_751frames.dcd
+/home/greg/Desktop/HPC/example_pn3_10RU_751frames.dcd
 1
 1-759
 45591-49596

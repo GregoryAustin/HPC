@@ -2,15 +2,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "includes/dcdplugin.c"
-#include "priority_queue.c"
-#include "linked_list.c"
+#include "includes/priority_queue.c"
+#include "includes/linked_list.c"
 #include <assert.h>
 #include <time.h>
 #include <omp.h>
-#include "mergeSort.c"
-#include "dynam_arr.c"
-#include "utility.c"
-
+#include "includes/mergeSort.c"
+#include "includes/dynam_arr.c"
+#include "includes/utility.c"
 
 typedef int bool;
 #define true 1

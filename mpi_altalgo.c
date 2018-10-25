@@ -197,19 +197,15 @@ int main(int argc, char** argv) {
     while (fgets(buf,1000, ptr_file)!=NULL) {
         if (count == 0) {
             int c = 0; 
-            int cS = 0; 
-
 
             dcdfile = malloc(sizeof(char*) * strlen(buf));
             //TODO: change this before you upload this dink
-             while (buf[c] != '\0') {
-                if (buf[c] != '\n') {
-                    dcdfile[cS++] = buf[c];
-                }
+             while (buf[c] != '\n') {
+                dcdfile[c] = buf[c];
                 c++;
              }
 
-             dcdfile[cS-1] = '\0';
+             dcdfile[c] = '\0';
 
              // printf("%s", dcdfile); 
         } else if (count == 1)

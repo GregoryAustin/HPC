@@ -196,18 +196,28 @@ int main(int argc, char** argv) {
 
     while (fgets(buf,1000, ptr_file)!=NULL) {
         if (count == 0) {
-            int c = 0; 
+            //int c = 0; 
+
+            //dcdfile = malloc(sizeof(char*) * strlen(buf));
+            //TODO: change this before you upload this dink
+            // while (buf[c] != '\n') {
+            ///    dcdfile[c] = buf[c];
+             //   c++;
+             //}
+
+             //dcdfile[c] = '\0';
+
+             // printf("%s", dcdfile); 
+		int c = 0; 
 
             dcdfile = malloc(sizeof(char*) * strlen(buf));
-            //TODO: change this before you upload this dink
-             while (buf[c] != '\n') {
+             while (buf[c] != '\0' && buf[c] != '\n') {
                 dcdfile[c] = buf[c];
                 c++;
              }
-
-             dcdfile[c] = '\0';
-
-             // printf("%s", dcdfile); 
+             // this gets rid of a line break before the \0 character
+             // TODO: a safer way to do this (ignore \n's) 
+             dcdfile[c-1] = '\0';
         } else if (count == 1)
             sscanf(buf, "%d", &k);
         else if (count == 2) {
@@ -325,7 +335,7 @@ int main(int argc, char** argv) {
 
             Node *pk = peek(&(listPQ[i]));
             // printf("This is happening") ;
-            fprintf(output, "\n%d, %d, %d, %f", i+startForThisProc, pk->a, pk->b, sqrtf(pk->priority)); 
+            fprintf(output, "%d, %d, %d, %f\n", i+startForThisProc, pk->a, pk->b, sqrtf(pk->priority)); 
 
             // printf("\n%d, %d, %d, %f", i+startForThisProc, pk->a, pk->b, sqrtf(pk->priority));
             pop(&(listPQ[i])); 
